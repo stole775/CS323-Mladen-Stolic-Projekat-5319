@@ -1,0 +1,12 @@
+[Ucesnici]
+0,Petar Petrovic,1372.00
+1,Marko Markovic,998.50
+2,Jovan Jovanovic,600.75
+
+[Dogadjaji]
+0,Partizan,Crvena Zvezda,2.50,3.00,2023-10-10,0
+1,Miami Heat,Los Angeles Lakers,3.00,2.75,2023-10-12,0
+2,Novak Djokovic,Rafael Nadal,1.75,2.05,2023-10-14,0
+
+[Ulozi]
+0,2,1,500.00,1

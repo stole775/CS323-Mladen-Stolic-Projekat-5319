@@ -1,0 +1,243 @@
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_UCESNIKA 100
+#define MAX_DOGADJAJA 50
+#define MAX_ULOGA 200
+#define IME_DULJINA 50
+
+typedef struct {
+    int id;
+    char ime[IME_DULJINA];
+    float saldo;
+} Ucesnik;
+
+typedef struct {
+    int id;
+    char naziv[IME_DULJINA];
+    float kvota;
+    int odigran; // 0 - nije odigran, 1 - odigran
+} Dogadjaj;
+
+typedef struct {
+    int idUcesnika;
+    int idDogadjaja;
+    float ulog;
+} Ulog;
+
+Ucesnik ucesnici[MAX_UCESNIKA];
+Dogadjaj dogadjaji[MAX_DOGADJAJA];
+Ulog ulozi[MAX_ULOGA];
+
+int brojUcesnika = 0, brojDogadjaja = 0, brojUloga = 0;
+
+void dodajUcesnika(char* ime, float saldo) {
+    if (brojUcesnika >= MAX_UCESNIKA) {
+        printf("Dostignut maksimalan broj ucesnika.\n");
+        return;
+    }
+    Ucesnik u;
+    u.id = brojUcesnika;
+    strncpy(u.ime, ime, IME_DULJINA - 1);
+    u.ime[IME_DULJINA - 1] = '\0'; // Obezbediti da string bude null-terminated
+    u.saldo = saldo;
+    ucesnici[brojUcesnika++] = u;
+}
+
+void dodajDogadjaj(char* naziv, float kvota) {
+    if (brojDogadjaja >= MAX_DOGADJAJA) {
+        printf("Dostignut maksimalan broj dogadjaja.\n");
+        return;
+    }
+    Dogadjaj d;
+    d.id = brojDogadjaja;
+    strncpy(d.naziv, naziv, IME_DULJINA - 1);
+    d.naziv[IME_DULJINA - 1] = '\0'; // Obezbediti da string bude null-terminated
+    d.kvota = kvota;
+    d.odigran = 0;
+    dogadjaji[brojDogadjaja++] = d;
+}
+
+void dodajUlog(int idUcesnika, int idDogadjaja, float ulog) {
+    if (brojUloga >= MAX_ULOGA) {
+        printf("Dostignut maksimalan broj uloga.\n");
+        return;
+    }
+    if (idUcesnika >= brojUcesnika || idDogadjaja >= brojDogadjaja) {
+        printf("Nevazeci ID ucesnika ili dogadaja.\n");
+        return;
+    }
+    if (ucesnici[idUcesnika].saldo < ulog) {
+        printf("Nedovoljno sredstava za ulog.\n");
+        return;
+    }
+
+    Ulog u;
+    u.idUcesnika = idUcesnika;
+    u.idDogadjaja = idDogadjaja;
+    u.ulog = ulog;
+    ulozi[brojUloga++] = u;
+    ucesnici[idUcesnika].saldo -= ulog;
+}
+
+void ispisiMeni() {
+    printf("1. Dodaj ucesnika\n");
+    printf("2. Dodaj dogadjaj\n");
+    printf("3. Postavi ulog\n");
+    printf("4. Prikazi sve ucesnike\n");
+    printf("5. Prikazi sve dogadjaje\n");
+    printf("0. Izlaz\n");
+    printf("Izaberite opciju: ");
+}
+
+void obradiOpciju(int opcija) {
+    char ime[IME_DULJINA];
+    char naziv[IME_DULJINA];
+    float saldo, kvota, ulog;
+    int idUcesnika, idDogadjaja;
+
+    switch (opcija) {
+    case 1:
+        printf("Unesite ime ucesnika: ");
+        scanf("%49s", ime, _countof(ime));
+        printf("Unesite saldo: ");
+        scanf("%f", &saldo);
+        dodajUcesnika(ime, saldo);
+        break;
+    case 2:
+        printf("Unesite naziv dogadjaja: ");
+        scanf("%49s", naziv, _countof(naziv));
+        printf("Unesite kvotu: ");
+        scanf("%f", &kvota);
+        dodajDogadjaj(naziv, kvota);
+        break;
+    case 3:
+        printf("Unesite ID ucesnika: ");
+        scanf("%d", &idUcesnika);
+        printf("Unesite ID dogadjaja: ");
+        scanf("%d", &idDogadjaja);
+        printf("Unesite ulog: ");
+        scanf("%f", &ulog);
+        dodajUlog(idUcesnika, idDogadjaja, ulog);
+        break;
+    case 4:
+        for (int i = 0; i < brojUcesnika; i++) {
+            printf("ID: %d, Ime: %s, Saldo: %.2f\n", ucesnici[i].id, ucesnici[i].ime, ucesnici[i].saldo);
+        }
+        break;
+    case 5:
+        for (int i = 0; i < brojDogadjaja; i++) {
+            printf("ID: %d, Naziv: %s, Kvota: %.2f, Odigran: %d\n", dogadjaji[i].id, dogadjaji[i].naziv, dogadjaji[i].kvota, dogadjaji[i].odigran);
+        }
+        break;
+    default:
+        printf("Nepoznata opcija.\n");
+    }
+}
+
+void ucitajPodatke(const char* putanjaFajla) {
+    FILE* f;
+    char linija[256];
+    int sekcija = 0; // 0: nepoznato, 1: ucesnici, 2: dogadjaji, 3: ulozi
+
+    if (fopen_s(&f, putanjaFajla, "r") != 0) {
+        printf("Greška pri otvaranju fajla za čitanje!\n");
+        return;
+    }
+
+    while (fgets(linija, sizeof(linija), f)) {
+        // Ukloni newline karakter na kraju linije ako postoji
+        linija[strcspn(linija, "\n")] = 0;
+
+        // Proveri da li linija sadrži naziv sekcije
+        if (strcmp(linija, "[Ucesnici]") == 0) {
+            sekcija = 1;
+            continue;
+        }
+        else if (strcmp(linija, "[Dogadjaji]") == 0) {
+            sekcija = 2;
+            continue;
+        }
+        else if (strcmp(linija, "[Ulozi]") == 0) {
+            sekcija = 3;
+            continue;
+        }
+
+        // Obradi liniju u zavisnosti od trenutne sekcije
+        switch (sekcija) {
+        case 1: { // Ucesnici
+            Ucesnik u;
+            if (sscanf(linija, "%d,%49[^,],%f", &u.id, u.ime, &u.saldo) == 3) {
+                // Pretpostavljamo da se ID učesnika automatski generiše i ne koristi se pri dodavanju
+                dodajUcesnika(u.ime, u.saldo);
+            }
+            break;
+        }
+        case 2: { // Dogadjaji
+            Dogadjaj d;
+            if (sscanf(linija, "%d,%49[^,],%f", &d.id, d.naziv, &d.kvota) == 3) {
+                d.odigran = 0; // Inicijalno postavljamo da događaj nije odigran
+                // Pretpostavljamo da se ID događaja automatski generiše i ne koristi se pri dodavanju
+                dodajDogadjaj(d.naziv, d.kvota);
+            }
+            break;
+        }
+        case 3: { // Ulozi
+            int idUcesnika, idDogadjaja;
+            float ulog;
+            if (sscanf(linija, "%d,%d,%f", &idUcesnika, &idDogadjaja, &ulog) == 3) {
+                dodajUlog(idUcesnika, idDogadjaja, ulog);
+            }
+            break;
+        }
+        }
+    }
+
+    fclose(f);
+}
+
+
+void sacuvajPodatke(const char* putanjaFajla) {
+    FILE* f;
+    if (fopen_s(&f, putanjaFajla, "w") != 0) {
+        printf("Greška pri otvaranju fajla za pisanje!\n");
+        return;
+    }
+
+    // Zapisivanje učesnika
+    fprintf(f, "[Ucesnici]\n");
+    for (int i = 0; i < brojUcesnika; i++) {
+        fprintf(f, "%d,%s,%.2f\n", ucesnici[i].id, ucesnici[i].ime, ucesnici[i].saldo);
+    }
+
+    // Zapisivanje događaja
+    fprintf(f, "\n[Dogadjaji]\n");
+    for (int i = 0; i < brojDogadjaja; i++) {
+        fprintf(f, "%d,%s,%.2f,%d\n", dogadjaji[i].id, dogadjaji[i].naziv, dogadjaji[i].kvota, dogadjaji[i].odigran);
+    }
+
+    // Zapisivanje uloga
+    fprintf(f, "\n[Ulozi]\n");
+    for (int i = 0; i < brojUloga; i++) {
+        fprintf(f, "%d,%d,%.2f\n", ulozi[i].idUcesnika, ulozi[i].idDogadjaja, ulozi[i].ulog);
+    }
+
+    fclose(f);
+}
+
+
+int main() {
+    ucitajPodatke("podaci.txt");
+    int opcija;
+    do {
+        ispisiMeni();
+        scanf("%d", &opcija);
+        obradiOpciju(opcija);
+    } while (opcija != 0);
+
+    sacuvajPodatke("podaci.txt");
+    return 0;
+}
+
